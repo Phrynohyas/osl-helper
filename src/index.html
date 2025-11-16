@@ -32,8 +32,8 @@
         .app {
             width: 100vw;
             max-width: 1200px;
-            height: 100vh;
-            max-height: 900px;
+            height: calc(var(--vh, 1vh) * 100);
+            max-height: calc(var(--vh, 1vh) * 100);
             padding: 10px;
             display: grid;
             grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
@@ -696,9 +696,18 @@
             // --- Add light button ---
             addBtn.addEventListener('click', createRect);
 
+            // --- Viewport size management ---
+            function setVhUnit() {
+                const vh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
+            }
+
+            window.addEventListener('resize', setVhUnit);
+
             // Init
             setViewMode(0);
             createRect();
+            setVhUnit();
         })();
     </script>
 </body>
