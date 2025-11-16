@@ -2,11 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <title>Light Source Playground</title>
+    <title>OSL Helper</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
         :root {
             --bg: #000000; /* background color (controlled via button) */
+            --panel-pad: 10px; /* panel padding (kept in sync with .panel) */
+            --tool-gap: 8px; /* vertical spacing between tools */
+            --tool-height: 46px; /* uniform tool button height */
             font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
@@ -246,6 +249,19 @@
             display: none;
         }
 
+        body.mode-1 .canvas {
+            position: fixed;
+            inset: 0;
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            z-index: 9999;
+            /* background stays var(--bg); do not override here */
+        }
+
         body.mode-2 .panel {
             display: none;
         }
@@ -274,6 +290,44 @@
         body.mode-2 .rect.selected {
             outline: none;
         }
+
+        /* Tools column: stacked full-width buttons */
+        .tools {
+            display: flex;
+            width: 100%;
+            flex-direction: column;
+            gap: var(--tool-gap);
+            margin-top: 6px;
+            margin-bottom: 2px;
+        }
+
+        .tool-btn {
+            display: block;
+            width: 100%; /* fills the inner panel width (panel minus padding) */
+            height: var(--tool-height); /* same height for all tool buttons */
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #1e88e5;
+            color: #fff;
+            text-align: center;
+            touch-action: manipulation;
+        }
+
+            .tool-btn:hover:enabled {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+                background: #2196f3;
+            }
+
+            .tool-btn:disabled {
+                background: #333;
+                color: #777;
+                cursor: default;
+                box-shadow: none;
+                transform: none;
+            }
     </style>
 </head>
 <body class="mode-0">
@@ -288,10 +342,10 @@
                         Double-click/tap a light to remove it.
                     </div>
                 </div>
-                <div class="controls-row">
-                    <button id="bgColorBtn" title="Pick background color">Background color</button>
-                    <button id="addRectBtn">Add light source</button>
+                <div class="tools">
+                    <button id="bgColorBtn" class="tool-btn" title="Pick background color">Background color</button>
                     <input id="bgColorPicker" type="color" value="#000000" style="position:absolute; opacity:0; width:0; height:0; pointer-events:none;" aria-hidden="true" />
+                    <button id="addRectBtn" class="tool-btn">Add light source</button>
                 </div>
             </div>
 
