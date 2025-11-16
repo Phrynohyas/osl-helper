@@ -87,12 +87,6 @@
             touch-action: manipulation;
         }
 
-            button:hover:enabled {
-                transform: translateY(-1px);
-                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-                background: #2196f3;
-            }
-
             button:disabled {
                 background: #333;
                 color: #777;
@@ -302,9 +296,11 @@
         }
 
         .tool-btn {
-            display: block;
-            width: 100%; /* fills the inner panel width (panel minus padding) */
-            height: var(--tool-height); /* same height for all tool buttons */
+            display: flex; /* flex instead of block */
+            align-items: center; /* vertical center */
+            justify-content: center; /* horizontal center */
+            width: 100%;
+            height: var(--tool-height);
             border: none;
             border-radius: 12px;
             font-size: 14px;
@@ -313,13 +309,8 @@
             color: #fff;
             text-align: center;
             touch-action: manipulation;
+            position: relative;
         }
-
-            .tool-btn:hover:enabled {
-                transform: translateY(-1px);
-                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-                background: #2196f3;
-            }
 
             .tool-btn:disabled {
                 background: #333;
@@ -328,6 +319,22 @@
                 box-shadow: none;
                 transform: none;
             }
+
+        .color-btn-wrapper {
+            overflow: hidden; /* optional: keeps the input clipped to button radius */
+        }
+
+        .color-hit-area {
+            position: absolute;
+            inset: 0; /* top:0; right:0; bottom:0; left:0 */
+            width: 100%;
+            height: 100%;
+            opacity: 0; /* visually hidden, but still clickable */
+            border: none;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body class="mode-0">
@@ -343,8 +350,15 @@
                     </div>
                 </div>
                 <div class="tools">
-                    <button id="bgColorBtn" class="tool-btn" title="Pick background color">Background color</button>
-                    <input id="bgColorPicker" type="color" value="#000000" style="position:absolute; opacity:0; width:0; height:0; pointer-events:none;" aria-hidden="true" />
+                    <div class="tool-btn color-btn-wrapper" title="Pick background color">
+                        Background color
+                        <input id="bgColorPicker"
+                               type="color"
+                               value="#000000"
+                               class="color-hit-area"
+                               aria-label="Pick background color" />
+                    </div>
+
                     <button id="addRectBtn" class="tool-btn">Add light source</button>
                 </div>
             </div>
@@ -370,7 +384,6 @@
             const canvas = document.getElementById('canvas');
             const addBtn = document.getElementById('addRectBtn');
             const rectList = document.getElementById('rectList');
-            const bgBtn = document.getElementById('bgColorBtn');
             const bgPicker = document.getElementById('bgColorPicker');
 
             // initialize background color
@@ -675,9 +688,6 @@
             canvas.addEventListener('pointerup', handleCanvasTap);
 
             // --- Background color button ---
-            bgBtn.addEventListener('click', () => {
-                bgPicker.click();
-            });
             bgPicker.addEventListener('input', () => {
                 document.documentElement.style.setProperty('--bg', bgPicker.value);
             });
