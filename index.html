@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Rectangle Playground</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .app {
+      width: 100vw;
+      max-width: 1200px;
+      height: 100vh;
+      max-height: 900px;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+      gap: 10px;
+    }
+
+    .panel {
+      background: #111;
+      border-radius: 18px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .panel-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .hint {
+      font-size: 10px;
+      color: #aaa;
+    }
+
+    button {
+      border: none;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      cursor: pointer;
+      background: #1e88e5;
+      color: #fff;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+      white-space: nowrap;
+      touch-action: manipulation;
+    }
+
+    button:hover:enabled {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      background: #2196f3;
+    }
+
+    button:disabled {
+      background: #333;
+      color: #777;
+      cursor: default;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .rect-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+      padding-right: 2px;
+      flex: 1;
+    }
+
+    .rect-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px;
+      align-items: center;
+      padding: 6px 8px;
+      border-radius: 12px;
+      background: #181818;
+      border: 1px solid #262626;
+      font-size: 10px;
+    }
+
+    .rect-label {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .rect-label span {
+      font-size: 9px;
+      color: #aaa;
+    }
+
+    .color-input {
+      width: 34px;
+      height: 22px;
+      border-radius: 6px;
+      border: none;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .note {
+      font-size: 9px;
+      color: #666;
+      text-align: left;
+    }
+
+    .canvas {
+      position: relative;
+      background: #000;
+      border-radius: 18px;
+      border: 1px solid #222;
+      box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.9);
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .canvas-hint {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font-size: 9px;
+      color: #555;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .rect {
+      position: absolute;
+      min-width: 40px;
+      min-height: 30px;
+      border-radius: 6px;
+      background: #e91e63;
+      cursor: grab;
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+      box-shadow: 0 0 8px rgba(0,0,0,0.8);
+      touch-action: none;
+    }
+
+    .rect:active {
+      cursor: grabbing;
+    }
+
+    .rect.selected {
+      outline: 2px solid #ffffff88;
+    }
+
+    .resize-handle {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      margin: 3px;
+      background: #fff;
+      cursor: se-resize;
+      flex-shrink: 0;
+      touch-action: none;
+    }
+
+    .rect-list::-webkit-scrollbar {
+      width: 4px;
+    }
+    .rect-list::-webkit-scrollbar-track {
+      background: #111;
+    }
+    .rect-list::-webkit-scrollbar-thumb {
+      background: #333;
+      border-radius: 999px;
+    }
+
+    /* Mobile layout */
+    @media (max-width: 720px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: 100vh;
+        max-height: 100vh;
+        padding: 6px;
+      }
+
+      .panel {
+        order: 1;
+        padding: 8px;
+        border-radius: 14px;
+      }
+
+      .canvas {
+        order: 2;
+        border-radius: 14px;
+      }
+
+      .panel-title {
+        font-size: 14px;
+      }
+    }
+
+    /* VIEW MODES:
+       mode-0: full UI
+       mode-1: hide panel (add UI + list)
+       mode-2: hide panel + borders + resize handles (clean, rectangles still movable)
+    */
+
+    body.mode-1 .panel {
+      display: none;
+    }
+	
+	 body.mode-1 .canvas {
+      position: fixed;
+      inset: 0;
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      background: #000;
+      z-index: 9999;
+    }
+
+    body.mode-2 .panel {
+      display: none;
+    }
+
+    body.mode-2 .canvas {
+      position: fixed;
+      inset: 0;
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      background: #000;
+      z-index: 9999;
+    }
+
+    body.mode-2 .canvas-hint {
+      display: none;
+    }
+
+    body.mode-2 .resize-handle {
+      display: none;
+    }
+
+    body.mode-2 .rect.selected {
+      outline: none;
+    }
+  </style>
+</head>
+<body class="mode-0">
+  <div class="app">
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Rectangles (max 4)</div>
+          <div class="hint">
+            Add, color, drag & resize.<br />
+            Double-click/Double-tap empty black area to cycle views.<br />
+            Double-click rectangle to remove it.
+          </div>
+        </div>
+        <button id="addRectBtn">Add rectangle</button>
+      </div>
+      <div id="rectList" class="rect-list"></div>
+      <div class="note">
+        • Drag a rectangle to move it.<br />
+        • Drag the white corner square to resize.<br />
+        • Change color via its picker.<br />
+        • Double-click a rectangle to remove it (also from list).<br />
+        • 1st background double-click: hide side UI.<br />
+        • 2nd: also hide borders & white squares (rectangles still movable).<br />
+        • 3rd: restore full UI.
+      </div>
+    </div>
+
+    <div id="canvas" class="canvas">
+      <div class="canvas-hint">Double-click empty area to cycle UI modes</div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const maxRects = 4;
+      const canvas = document.getElementById('canvas');
+      const addBtn = document.getElementById('addRectBtn');
+      const rectList = document.getElementById('rectList');
+
+      let rectCounter = 0;
+      let activeAction = null; // 'drag' | 'resize' | null
+      let activeRect = null;
+      let startX = 0;
+      let startY = 0;
+      let startLeft = 0;
+      let startTop = 0;
+      let startWidth = 0;
+      let startHeight = 0;
+
+      // View mode: 0 = full, 1 = panel hidden, 2 = clean
+      let viewMode = 0;
+
+      // Double-tap / double-click detection on canvas background
+      let lastTapTime = 0;
+      const doubleTapDelay = 300;
+
+      function setViewMode(mode) {
+        viewMode = mode;
+        document.body.classList.remove('mode-0', 'mode-1', 'mode-2');
+        document.body.classList.add('mode-' + mode);
+      }
+
+      function updateAddButtonState() {
+        const count = canvas.querySelectorAll('.rect').length;
+        addBtn.disabled = count >= maxRects;
+      }
+
+      function getDefaultColor(index) {
+        const palette = ['#e91e63', '#4caf50', '#ff9800', '#03a9f4'];
+        return palette[(index - 1) % palette.length];
+      }
+
+      function rgbToHex(color) {
+        if (!color) return null;
+        if (color.startsWith('#')) return color;
+        const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+        if (!match) return null;
+        const r = parseInt(match[1], 10);
+        const g = parseInt(match[2], 10);
+        const b = parseInt(match[3], 10);
+        const toHex = (v) => v.toString(16).padStart(2, '0');
+        return '#' + toHex(r) + toHex(g) + toHex(b);
+      }
+
+      function getRectById(id) {
+        return canvas.querySelector(`.rect[data-id="${id}"]`);
+      }
+
+      function selectRect(rect) {
+        canvas.querySelectorAll('.rect').forEach(r => r.classList.remove('selected'));
+        if (rect) rect.classList.add('selected');
+      }
+
+      function createRectControls(id, initialColor) {
+        const item = document.createElement('div');
+        item.className = 'rect-item';
+        item.dataset.id = id;
+
+        const label = document.createElement('div');
+        label.className = 'rect-label';
+        label.innerHTML = `<strong>${id}</strong><span>Color</span>`;
+
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.value = rgbToHex(initialColor) || '#e91e63';
+        colorInput.className = 'color-input';
+
+        colorInput.addEventListener('input', function () {
+          const rect = getRectById(id);
+          if (rect) rect.style.backgroundColor = colorInput.value;
+        });
+
+        item.appendChild(label);
+        item.appendChild(colorInput);
+        rectList.appendChild(item);
+
+        item.addEventListener('click', () => {
+          const rect = getRectById(id);
+          if (rect) selectRect(rect);
+        });
+      }
+
+      function removeRect(rect) {
+        const id = rect.dataset.id;
+        // Remove from canvas
+        rect.remove();
+        // Remove from list
+        const item = rectList.querySelector(`.rect-item[data-id="${id}"]`);
+        if (item) item.remove();
+        // Clear selection if needed
+        if (activeRect === rect) {
+          activeRect = null;
+        }
+        updateAddButtonState();
+      }
+
+      function createRect() {
+        if (canvas.querySelectorAll('.rect').length >= maxRects) return;
+
+        rectCounter++;
+        const id = 'rect-' + rectCounter;
+
+        const rect = document.createElement('div');
+        rect.className = 'rect';
+        rect.dataset.id = id;
+
+        const baseSize = 100;
+        const offset = (rectCounter - 1) * 20;
+        rect.style.width = baseSize + 'px';
+        rect.style.height = (baseSize * 0.6) + 'px';
+        rect.style.left = (20 + offset) + 'px';
+        rect.style.top = (20 + offset) + 'px';
+        rect.style.backgroundColor = getDefaultColor(rectCounter);
+
+        const handle = document.createElement('div');
+        handle.className = 'resize-handle';
+        rect.appendChild(handle);
+
+        canvas.appendChild(rect);
+        createRectControls(id, rect.style.backgroundColor);
+
+        // Drag / move
+        rect.addEventListener('pointerdown', onRectPointerDown);
+        // Resize
+        handle.addEventListener('pointerdown', onResizePointerDown);
+        // Select
+        rect.addEventListener('pointerdown', () => selectRect(rect));
+        // Double-click to remove
+        rect.addEventListener('dblclick', function (e) {
+          e.stopPropagation();
+          removeRect(rect);
+        });
+
+        selectRect(rect);
+        updateAddButtonState();
+      }
+
+      function onRectPointerDown(e) {
+        const rect = e.currentTarget;
+        const handle = rect.querySelector('.resize-handle');
+
+        // If starting on resize handle, let resize handler manage
+        if (e.target === handle) return;
+
+        e.preventDefault();
+        activeAction = 'drag';
+        activeRect = rect;
+        selectRect(rect);
+
+        const rectBox = rect.getBoundingClientRect();
+        const canvasBox = canvas.getBoundingClientRect();
+
+        startX = e.clientX;
+        startY = e.clientY;
+        startLeft = rectBox.left - canvasBox.left;
+        startTop = rectBox.top - canvasBox.top;
+
+        rect.setPointerCapture(e.pointerId);
+        rect.addEventListener('pointermove', onPointerMove);
+        rect.addEventListener('pointerup', onPointerUp);
+        rect.addEventListener('pointercancel', onPointerUp);
+      }
+
+      function onResizePointerDown(e) {
+        e.stopPropagation();
+        e.preventDefault();
+
+        const rect = e.currentTarget.parentElement;
+
+        activeAction = 'resize';
+        activeRect = rect;
+        selectRect(rect);
+
+        const rectBox = rect.getBoundingClientRect();
+        const canvasBox = canvas.getBoundingClientRect();
+
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = rectBox.width;
+        startHeight = rectBox.height;
+        startLeft = rectBox.left - canvasBox.left;
+        startTop = rectBox.top - canvasBox.top;
+
+        rect.setPointerCapture(e.pointerId);
+        rect.addEventListener('pointermove', onPointerMove);
+        rect.addEventListener('pointerup', onPointerUp);
+        rect.addEventListener('pointercancel', onPointerUp);
+      }
+
+      function onPointerMove(e) {
+        if (!activeRect || !activeAction) return;
+
+        const canvasBox = canvas.getBoundingClientRect();
+
+        if (activeAction === 'drag') {
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+
+          const rectBox = activeRect.getBoundingClientRect();
+          const width = rectBox.width;
+          const height = rectBox.height;
+
+          let newLeft = startLeft + dx;
+          let newTop = startTop + dy;
+
+          newLeft = Math.max(0, Math.min(newLeft, canvasBox.width - width));
+          newTop = Math.max(0, Math.min(newTop, canvasBox.height - height));
+
+          activeRect.style.left = newLeft + 'px';
+          activeRect.style.top = newTop + 'px';
+        } else if (activeAction === 'resize') {
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+
+          let newWidth = startWidth + dx;
+          let newHeight = startHeight + dy;
+
+          const minW = 40;
+          const minH = 30;
+
+          newWidth = Math.max(minW, newWidth);
+          newHeight = Math.max(minH, newHeight);
+
+          if (startLeft + newWidth > canvasBox.width) {
+            newWidth = canvasBox.width - startLeft;
+          }
+          if (startTop + newHeight > canvasBox.height) {
+            newHeight = canvasBox.height - startTop;
+          }
+
+          activeRect.style.width = newWidth + 'px';
+          activeRect.style.height = newHeight + 'px';
+        }
+      }
+
+      function onPointerUp(e) {
+        if (!activeRect) return;
+        try {
+          activeRect.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+        activeRect.removeEventListener('pointermove', onPointerMove);
+        activeRect.removeEventListener('pointerup', onPointerUp);
+        activeRect.removeEventListener('pointercancel', onPointerUp);
+        activeAction = null;
+        activeRect = null;
+      }
+
+      // Background double-click / double-tap handler
+      function handleCanvasTap(e) {
+        const target = e.target;
+
+        // Ignore if the tap is on rectangle or handle
+        if (target.classList.contains('rect') || target.classList.contains('resize-handle')) {
+          return;
+        }
+
+        const now = Date.now();
+        if (now - lastTapTime < doubleTapDelay) {
+          e.preventDefault();
+          // Detected double-tap/click on background → cycle modes
+          const nextMode = (viewMode + 1) % 3;
+          setViewMode(nextMode);
+          lastTapTime = 0;
+        } else {
+          lastTapTime = now;
+        }
+      }
+
+      canvas.addEventListener('pointerup', handleCanvasTap);
+      addBtn.addEventListener('click', createRect);
+
+      // Initialize
+      setViewMode(0);
+      createRect();
+    })();
+  </script>
+</body>
+</html>
