@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>OSL Helper</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        :root {
+            --bg: #000000; /* background color (controlled via button) */
+            --panel-pad: 10px; /* panel padding (kept in sync with .panel) */
+            --tool-gap: 8px; /* vertical spacing between tools */
+            --tool-height: 46px; /* uniform tool button height */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .app {
+            width: 100vw;
+            max-width: 1200px;
+            height: 100vh;
+            max-height: 900px;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+            gap: 10px;
+        }
+
+        .panel {
+            background: #111;
+            border-radius: 18px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .hint {
+            font-size: 10px;
+            color: #aaa;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            border: none;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            cursor: pointer;
+            background: #1e88e5;
+            color: #fff;
+            transition: transform 0.08s, box-shadow 0.08s, background 0.15s;
+            white-space: nowrap;
+            touch-action: manipulation;
+        }
+
+            button:hover:enabled {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+                background: #2196f3;
+            }
+
+            button:disabled {
+                background: #333;
+                color: #777;
+                cursor: default;
+                box-shadow: none;
+                transform: none;
+            }
+
+        .rect-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow-y: auto;
+            padding-right: 2px;
+            flex: 1;
+        }
+
+        .rect-item {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 6px;
+            align-items: center;
+            padding: 6px 8px;
+            border-radius: 12px;
+            background: #181818;
+            border: 1px solid #262626;
+            font-size: 10px;
+        }
+
+        .rect-label {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+            .rect-label span {
+                font-size: 9px;
+                color: #aaa;
+            }
+
+        .color-input {
+            width: 34px;
+            height: 22px;
+            border-radius: 6px;
+            border: none;
+            padding: 0;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .note {
+            font-size: 9px;
+            color: #666;
+            text-align: left;
+        }
+
+        .canvas {
+            position: relative;
+            background: var(--bg);
+            border-radius: 18px;
+            border: 1px solid #222;
+            box-shadow: inset 0 0 18px rgba(0,0,0,0.9);
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .canvas-hint {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            font-size: 9px;
+            color: #555;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        .rect {
+            position: absolute;
+            min-width: 40px;
+            min-height: 30px;
+            border-radius: 6px;
+            background: #e91e63;
+            cursor: grab;
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-end;
+            box-shadow: 0 0 8px rgba(0,0,0,0.8);
+            touch-action: none;
+        }
+
+            .rect:active {
+                cursor: grabbing;
+            }
+
+            .rect.selected {
+                outline: 2px solid #ffffff88;
+            }
+
+        .resize-handle {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            margin: 3px;
+            background: #fff;
+            cursor: se-resize;
+            flex-shrink: 0;
+            touch-action: none;
+        }
+
+        .rect-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .rect-list::-webkit-scrollbar-track {
+            background: #111;
+        }
+
+        .rect-list::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 999px;
+        }
+
+        @media (max-width: 720px) {
+            .app {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+                height: 100vh;
+                max-height: 100vh;
+                padding: 6px;
+            }
+
+            .panel {
+                order: 1;
+                padding: 8px;
+                border-radius: 14px;
+            }
+
+            .canvas {
+                order: 2;
+                border-radius: 14px;
+            }
+
+            .panel-title {
+                font-size: 14px;
+            }
+        }
+
+        /* VIEW MODES:
+           mode-0: full UI
+           mode-1: hide panel only
+           mode-2: hide panel + borders + resize handles (clean, rects movable)
+        */
+        body.mode-1 .panel {
+            display: none;
+        }
+
+        body.mode-1 .canvas {
+            position: fixed;
+            inset: 0;
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            z-index: 9999;
+            /* background stays var(--bg); do not override here */
+        }
+
+        body.mode-2 .panel {
+            display: none;
+        }
+
+        body.mode-2 .canvas {
+            position: fixed;
+            inset: 0;
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            z-index: 9999;
+            /* background stays var(--bg); do not override here */
+        }
+
+        body.mode-2 .canvas-hint {
+            display: none;
+        }
+
+        body.mode-2 .resize-handle {
+            display: none;
+        }
+
+        body.mode-2 .rect.selected {
+            outline: none;
+        }
+
+        /* Tools column: stacked full-width buttons */
+        .tools {
+            display: flex;
+            width: 100%;
+            flex-direction: column;
+            gap: var(--tool-gap);
+            margin-top: 6px;
+            margin-bottom: 2px;
+        }
+
+        .tool-btn {
+            display: block;
+            width: 100%; /* fills the inner panel width (panel minus padding) */
+            height: var(--tool-height); /* same height for all tool buttons */
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #1e88e5;
+            color: #fff;
+            text-align: center;
+            touch-action: manipulation;
+        }
+
+            .tool-btn:hover:enabled {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+                background: #2196f3;
+            }
+
+            .tool-btn:disabled {
+                background: #333;
+                color: #777;
+                cursor: default;
+                box-shadow: none;
+                transform: none;
+            }
+    </style>
+</head>
+<body class="mode-0">
+    <div class="app">
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-title">Light Sources (max 4)</div>
+                    <div class="hint">
+                        Add, color, drag & resize lights.<br />
+                        Double-click/tap empty area to cycle modes.<br />
+                        Double-click/tap a light to remove it.
+                    </div>
+                </div>
+                <div class="tools">
+                    <button id="bgColorBtn" class="tool-btn" title="Pick background color">Background color</button>
+                    <input id="bgColorPicker" type="color" value="#000000" style="position:absolute; opacity:0; width:0; height:0; pointer-events:none;" aria-hidden="true" />
+                    <button id="addRectBtn" class="tool-btn">Add light source</button>
+                </div>
+            </div>
+
+            <div id="rectList" class="rect-list"></div>
+
+            <div class="note">
+                • Drag a light to move it; drag the white corner square to resize.<br />
+                • Change a light’s color via its picker in the list.<br />
+                • Removing a light also removes it from the list & frees a slot.<br />
+                • Modes: 1) hide side UI, 2) also hide borders & handles (lights still movable), 3) restore.
+            </div>
+        </div>
+
+        <div id="canvas" class="canvas">
+            <div class="canvas-hint">Double-click/tap empty area to cycle UI modes</div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const maxRects = 4;
+            const canvas = document.getElementById('canvas');
+            const addBtn = document.getElementById('addRectBtn');
+            const rectList = document.getElementById('rectList');
+            const bgBtn = document.getElementById('bgColorBtn');
+            const bgPicker = document.getElementById('bgColorPicker');
+
+            // initialize background color
+            document.documentElement.style.setProperty('--bg', bgPicker.value);
+
+            let rectCounter = 0;
+            let activeAction = null; // 'drag' | 'resize'
+            let activeRect = null;
+            let startX = 0, startY = 0, startLeft = 0, startTop = 0, startWidth = 0, startHeight = 0;
+
+            // View mode: 0 = full, 1 = panel hidden, 2 = clean
+            let viewMode = 0;
+
+            // Background tap detection
+            let bgDownX = 0, bgDownY = 0, bgDownValid = false;
+            let lastBgTapTime = 0;
+            const doubleTapDelay = 300;
+            const tapMoveThreshold = 10;
+
+            // Rectangle double-tap detection
+            let lastRectTapTime = 0, lastRectTapId = null;
+            const rectDoubleTapDelay = 300;
+            const rectTapMoveThreshold = 10;
+
+            // --- Helpers ---
+            function setViewMode(mode) {
+                viewMode = mode;
+                document.body.classList.remove('mode-0', 'mode-1', 'mode-2');
+                document.body.classList.add('mode-' + mode);
+            }
+
+            function updateAddButtonState() {
+                const count = canvas.querySelectorAll('.rect').length;
+                addBtn.disabled = count >= maxRects;
+            }
+
+            function getDefaultColor(index) {
+                const palette = ['#e91e63', '#4caf50', '#ff9800', '#03a9f4'];
+                return palette[(index - 1) % palette.length];
+            }
+
+            function rgbToHex(color) {
+                if (!color) return null;
+                if (color.startsWith('#')) return color;
+                const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+                if (!match) return null;
+                const r = parseInt(match[1], 10);
+                const g = parseInt(match[2], 10);
+                const b = parseInt(match[3], 10);
+                const toHex = (v) => v.toString(16).padStart(2, '0');
+                return '#' + toHex(r) + toHex(g) + toHex(b);
+            }
+
+            function getRectById(id) {
+                return canvas.querySelector(`.rect[data-id="${id}"]`);
+            }
+
+            function selectRect(rect) {
+                canvas.querySelectorAll('.rect').forEach(r => r.classList.remove('selected'));
+                if (rect) rect.classList.add('selected');
+            }
+
+            function createRectControls(id, initialColor) {
+                const item = document.createElement('div');
+                item.className = 'rect-item';
+                item.dataset.id = id;
+
+                const label = document.createElement('div');
+                label.className = 'rect-label';
+                label.innerHTML = `<strong>${id}</strong><span>Color</span>`;
+
+                const colorInput = document.createElement('input');
+                colorInput.type = 'color';
+                colorInput.value = rgbToHex(initialColor) || '#e91e63';
+                colorInput.className = 'color-input';
+
+                colorInput.addEventListener('input', function () {
+                    const rect = getRectById(id);
+                    if (rect) rect.style.backgroundColor = colorInput.value;
+                });
+
+                item.appendChild(label);
+                item.appendChild(colorInput);
+                rectList.appendChild(item);
+
+                item.addEventListener('click', () => {
+                    const rect = getRectById(id);
+                    if (rect) selectRect(rect);
+                });
+            }
+
+            function removeRect(rect) {
+                if (!rect) return;
+                const id = rect.dataset.id;
+                rect.remove();
+                const item = rectList.querySelector(`.rect-item[data-id="${id}"]`);
+                if (item) item.remove();
+                if (activeRect === rect) activeRect = null;
+                updateAddButtonState();
+            }
+
+            function createRect() {
+                if (canvas.querySelectorAll('.rect').length >= maxRects) return;
+
+                rectCounter++;
+                const id = 'light-source-' + rectCounter;
+
+                const rect = document.createElement('div');
+                rect.className = 'rect';
+                rect.dataset.id = id;
+
+                const baseSize = 100;
+                const offset = (rectCounter - 1) * 20;
+                rect.style.width = baseSize + 'px';
+                rect.style.height = (baseSize * 0.6) + 'px';
+                rect.style.left = (20 + offset) + 'px';
+                rect.style.top = (20 + offset) + 'px';
+                rect.style.backgroundColor = getDefaultColor(rectCounter);
+
+                const handle = document.createElement('div');
+                handle.className = 'resize-handle';
+                rect.appendChild(handle);
+
+                canvas.appendChild(rect);
+                createRectControls(id, rect.style.backgroundColor);
+
+                // Select on press
+                rect.addEventListener('pointerdown', () => selectRect(rect));
+
+                // Drag/move
+                rect.addEventListener('pointerdown', onRectPointerDown);
+
+                // Resize
+                handle.addEventListener('pointerdown', onResizePointerDown);
+
+                // Desktop dblclick fallback
+                rect.addEventListener('dblclick', function (e) {
+                    e.stopPropagation();
+                    removeRect(rect);
+                });
+
+                selectRect(rect);
+                updateAddButtonState();
+            }
+
+            // --- Drag/Resize logic ---
+            function onRectPointerDown(e) {
+                const rect = e.currentTarget;
+                const handle = rect.querySelector('.resize-handle');
+                if (e.target === handle) return;
+
+                e.preventDefault();
+                activeAction = 'drag';
+                activeRect = rect;
+
+                const rectBox = rect.getBoundingClientRect();
+                const canvasBox = canvas.getBoundingClientRect();
+
+                startX = e.clientX;
+                startY = e.clientY;
+                startLeft = rectBox.left - canvasBox.left;
+                startTop = rectBox.top - canvasBox.top;
+
+                rect.setPointerCapture(e.pointerId);
+                rect.addEventListener('pointermove', onPointerMove);
+                rect.addEventListener('pointerup', onRectPointerUp);
+                rect.addEventListener('pointercancel', onRectPointerUp);
+            }
+
+            function onResizePointerDown(e) {
+                e.stopPropagation();
+                e.preventDefault();
+
+                const rect = e.currentTarget.parentElement;
+
+                activeAction = 'resize';
+                activeRect = rect;
+                selectRect(rect);
+
+                const rectBox = rect.getBoundingClientRect();
+                const canvasBox = canvas.getBoundingClientRect();
+
+                startX = e.clientX;
+                startY = e.clientY;
+                startWidth = rectBox.width;
+                startHeight = rectBox.height;
+                startLeft = rectBox.left - canvasBox.left;
+                startTop = rectBox.top - canvasBox.top;
+
+                rect.setPointerCapture(e.pointerId);
+                rect.addEventListener('pointermove', onPointerMove);
+                rect.addEventListener('pointerup', onRectPointerUp);
+                rect.addEventListener('pointercancel', onRectPointerUp);
+            }
+
+            function onPointerMove(e) {
+                if (!activeRect || !activeAction) return;
+
+                const canvasBox = canvas.getBoundingClientRect();
+
+                if (activeAction === 'drag') {
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+
+                    const rectBox = activeRect.getBoundingClientRect();
+                    const width = rectBox.width;
+                    const height = rectBox.height;
+
+                    let newLeft = startLeft + dx;
+                    let newTop = startTop + dy;
+
+                    newLeft = Math.max(0, Math.min(newLeft, canvasBox.width - width));
+                    newTop = Math.max(0, Math.min(newTop, canvasBox.height - height));
+
+                    activeRect.style.left = newLeft + 'px';
+                    activeRect.style.top = newTop + 'px';
+                } else if (activeAction === 'resize') {
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+
+                    let newWidth = startWidth + dx;
+                    let newHeight = startHeight + dy;
+
+                    const minW = 40;
+                    const minH = 30;
+
+                    newWidth = Math.max(minW, newWidth);
+                    newHeight = Math.max(minH, newHeight);
+
+                    if (startLeft + newWidth > canvasBox.width) {
+                        newWidth = canvasBox.width - startLeft;
+                    }
+                    if (startTop + newHeight > canvasBox.height) {
+                        newHeight = canvasBox.height - startTop;
+                    }
+
+                    activeRect.style.width = newWidth + 'px';
+                    activeRect.style.height = newHeight + 'px';
+                }
+            }
+
+            function onRectPointerUp(e) {
+                if (!activeRect) return;
+                const rect = activeRect;
+
+                try { rect.releasePointerCapture(e.pointerId); } catch (_) { }
+                rect.removeEventListener('pointermove', onPointerMove);
+                rect.removeEventListener('pointerup', onRectPointerUp);
+                rect.removeEventListener('pointercancel', onRectPointerUp);
+
+                const dx = Math.abs(e.clientX - startX);
+                const dy = Math.abs(e.clientY - startY);
+                const isTapLike = dx < rectTapMoveThreshold && dy < rectTapMoveThreshold;
+
+                activeAction = null;
+                activeRect = null;
+
+                if (!isTapLike) return;
+                if (!rect.isConnected) return;
+
+                const now = Date.now();
+                const id = rect.dataset.id;
+
+                if (now - lastRectTapTime < rectDoubleTapDelay && lastRectTapId === id) {
+                    removeRect(rect);
+                    lastRectTapTime = 0;
+                    lastRectTapId = null;
+                } else {
+                    lastRectTapTime = now;
+                    lastRectTapId = id;
+                }
+            }
+
+            // --- Background double-tap/tap-detect to cycle modes ---
+            canvas.addEventListener('pointerdown', (e) => {
+                const t = e.target;
+                if (t.classList.contains('rect') || t.classList.contains('resize-handle')) {
+                    bgDownValid = false; return;
+                }
+                bgDownValid = true; bgDownX = e.clientX; bgDownY = e.clientY;
+            });
+
+            function handleCanvasTap(e) {
+                const t = e.target;
+                if (!bgDownValid) return;
+                if (t.classList.contains('rect') || t.classList.contains('resize-handle')) return;
+
+                const dx = Math.abs(e.clientX - bgDownX);
+                const dy = Math.abs(e.clientY - bgDownY);
+                if (dx > tapMoveThreshold || dy > tapMoveThreshold) return;
+
+                const now = Date.now();
+                if (now - lastBgTapTime < doubleTapDelay) {
+                    e.preventDefault();
+                    const nextMode = (viewMode + 1) % 3;
+                    setViewMode(nextMode);
+                    lastBgTapTime = 0;
+                } else {
+                    lastBgTapTime = now;
+                }
+            }
+            canvas.addEventListener('pointerup', handleCanvasTap);
+
+            // --- Background color button ---
+            bgBtn.addEventListener('click', () => {
+                bgPicker.click();
+            });
+            bgPicker.addEventListener('input', () => {
+                document.documentElement.style.setProperty('--bg', bgPicker.value);
+            });
+
+            // --- Add light button ---
+            addBtn.addEventListener('click', createRect);
+
+            // Init
+            setViewMode(0);
+            createRect();
+        })();
+    </script>
+</body>
+</html>
