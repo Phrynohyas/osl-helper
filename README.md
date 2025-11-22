@@ -4,13 +4,19 @@ OSL Helper is a web tool to help you plan OSL and highlight placement for miniat
 
 It lets you place imitate different light sources, change their colors, and see how they might affect your scene.
 
+![OSL and highlights](images/osl-and-highlights.png)
+
+Application is available at https://oslhelper.cc/
+
+Fallback application URL is https://osl-helper.pages.dev/
+
 ---
 
 ## How to Use
 
 ### 1. Base scenario (single light source)
 - Adjust screen brightness of your device.
-- Tap **“Background color”**.
+- Tap **Background color**.
 - Pick any color in the color picker.
 - The big preview area (canvas) will update to that color.
 - Tap the canvas twice to go into UI-less mode.
@@ -19,7 +25,7 @@ It lets you place imitate different light sources, change their colors, and see 
 - If needed, set the background color as in the base use cenario
 
 - Add more Light Sources
-	- Tap **“Add light Source”** to create a new light.
+	- Tap **Add light Source** to create a new light.
 	- You can have up to **4** light sources at once.
 	- Each light gets its own entry in the **Light Sources** list.
 
@@ -38,19 +44,25 @@ It lets you place imitate different light sources, change their colors, and see 
 
 ---
 
-## View Modes (UI Hiding)
+## UI  Modes
 
 You can toggle how much UI is visible by double-tapping / double-clicking the **empty area** of the canvas:
 
-1. **Mode 1 – Full UI**  
+1. **Mode 1 - Full UI**  
    Side panel + borders + resize handles are visible.
 
-2. **Mode 2 – Clean canvas (no panel)**  
+2. **Mode 2 - Clean canvas (no panel)**  
    Side panel is hidden.
    Light Sources are still visible and draggable.
 
-3. **Mode 3 – Minimal**  
+3. **Mode 3 - Minimal**  
    Side panel, borders, resize handles, and hints are hidden.  
    Light Sources remain visible and movable.
 
 Double-tap the empty canvas area again to cycle back to the full UI.
+
+---
+
+## Personal Data
+
+This application does not store any data (including cookies) on the userâ€™s device, nor does it track any user activity.
